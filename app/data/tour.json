@@ -1,0 +1,380 @@
+[
+    {
+        "id": "scene1",
+        "name": "Parkir",
+        "imageFile": "1_parkir.jpg",
+        "hotspots": [
+            {
+                "id": "nav-scene1-scene2",
+                "type": "navigate",
+                "pitch": 2.688,
+                "yaw": 91.28,
+                "title": "Loket",
+                "targetSceneId": "scene2"
+            }
+        ]
+    },
+    {
+        "id": "scene2",
+        "name": "Loket",
+        "imageFile": "2_loket.jpg",
+        "hotspots": [
+            {
+                "id": "nav-scene2-scene1",
+                "type": "navigate",
+                "pitch": 0,
+                "yaw": 180,
+                "title": "Parkir",
+                "targetSceneId": "scene1"
+            },
+            {
+                "id": "nav-scene2-scene3",
+                "type": "navigate",
+                "pitch": 0,
+                "yaw": 0,
+                "title": "Halaman Utama",
+                "targetSceneId": "scene3"
+            },
+            {
+                "id": "loket-scene2-ticket",
+                "type": "loket",
+                "pitch": -5,
+                "yaw": 90,
+                "title": "Beli Tiket Masuk",
+                "description": "Loket pembelian tiket masuk utama",
+                "productId": "TIKET_MASUK"
+            }
+        ]
+    },
+    {
+        "id": "scene3",
+        "name": "Halaman Utama",
+        "imageFile": "3_halaman_utama.jpg",
+        "hotspots": [
+            {
+                "id": "nav-scene3-scene4",
+                "type": "navigate",
+                "pitch": 1.56,
+                "yaw": -171.68,
+                "title": "Pendopo",
+                "targetSceneId": "scene4"
+            },
+            {
+                "id": "nav-scene3-scene16",
+                "type": "navigate",
+                "pitch": -2.18,
+                "yaw": 62.99,
+                "title": "Jeep, Kuda, Kereta, Sepeda Air",
+                "targetSceneId": "scene16"
+            },
+            {
+                "id": "info-scene3-main-building",
+                "type": "info",
+                "pitch": -1.29,
+                "yaw": -116.73,
+                "title": "Informasi Gedung",
+                "description": "Ini adalah gedung utama D'LAS yang berfungsi sebagai pusat informasi dan pertemuan."
+            }
+        ]
+    },
+    {
+        "id": "scene4",
+        "name": "Pendopo dan Halaman Utama",
+        "imageFile": "4_pendopo.jpg",
+        "hotspots": [
+            {
+                "id": "nav-scene4-scene3",
+                "type": "navigate",
+                "pitch": 0,
+                "yaw": 180,
+                "title": "Halaman Utama",
+                "targetSceneId": "scene3"
+            },
+            {
+                "id": "nav-scene4-scene5",
+                "type": "navigate",
+                "pitch": -1.68,
+                "yaw": 66.61,
+                "title": "Musola, Toilet, Pusat Makan & Oleh-oleh, Playground, Green House, Kolam Renang, Cottage & Glamping, Meeting Room & Resepsionis, Cafe",
+                "targetSceneId": "scene5"
+            }
+        ]
+    },
+    {
+        "id": "scene5",
+        "name": "Musola, Toilet, Pusat Makan & Oleh-oleh, Playground, Green House, Kolam Renang, Cottage & Glamping, Meeting Room & Resepsionis, Cafe",
+        "imageFile": "5_foodcort.jpg",
+        "hotspots": [
+            {
+                "id": "nav-scene5-scene4",
+                "type": "navigate",
+                "pitch": 3.67,
+                "yaw": -99.93,
+                "title": "Pendopo dan Halaman Utama",
+                "targetSceneId": "scene4"
+            },
+            {
+                "id": "nav-scene5-scene6",
+                "type": "navigate",
+                "pitch": 0.13,
+                "yaw": -10.69,
+                "title": "Playground, Green House, Kolam Renang, Cottage & Glamping, Meeting Room & Resepsionis, Cafe",
+                "targetSceneId": "scene6"
+            }
+        ]
+    },
+    {
+        "id": "scene6",
+        "name": "Playground, Green House, Kolam Renang, Cottage & Glamping, Meeting Room & Resepsionis, Cafe",
+        "imageFile": "6_jalan_kebun_kolam.jpg",
+        "hotspots": [
+            {
+                "id": "nav-scene6-scene5",
+                "type": "navigate",
+                "pitch": 0,
+                "yaw": 180,
+                "title": "Musola, Toilet, Pusat Makan & Oleh-oleh",
+                "targetSceneId": "scene5"
+            },
+            {
+                "id": "nav-scene6-scene7",
+                "type": "navigate",
+                "pitch": 6.30,
+                "yaw": -4.92,
+                "title": "Playground, Green House, Kolam Renang",
+                "targetSceneId": "scene7"
+            }
+        ]
+    },
+    {
+        "id": "scene7",
+        "name": "Loket Playground, Green House, Kolam Renang",
+        "imageFile": "7_loket_kebun_kolam_playground.jpg",
+        "hotspots": [
+            {
+                "id": "nav-scene7-scene6",
+                "type": "navigate",
+                "pitch": -4.783,
+                "yaw": -174.12,
+                "title": "Musola, Toilet, Pusat Makan & Oleh-oleh",
+                "targetSceneId": "scene6"
+            },
+            {
+                "id": "nav-scene7-scene8",
+                "type": "navigate",
+                "pitch": 0,
+                "yaw": 0,
+                "title": "Green House dan Kolam Renang",
+                "targetSceneId": "scene8"
+            },
+            {
+                "id": "loket-scene7-wahana",
+                "type": "loket",
+                "pitch": -5,
+                "yaw": 45,
+                "title": "Tiket Wahana",
+                "description": "Beli tiket terusan wahana",
+                "productId": "TIKET_WAHANA"
+            }
+        ]
+    },
+    {
+        "id": "scene8",
+        "name": "Green House dan Kolam Renang",
+        "imageFile": "8_kolam_kebun.jpg",
+        "hotspots": [
+            {
+                "id": "nav-scene8-scene9",
+                "type": "navigate",
+                "pitch": -17.46,
+                "yaw": -7.17,
+                "title": "Loket Playground, Green House, Kolam Renang",
+                "targetSceneId": "scene7"
+            },
+            {
+                "id": "nav-scene8-scene9",
+                "type": "navigate",
+                "pitch": 0.93,
+                "yaw": 173.82,
+                "title": "Cottage & Glamping, Meeting Room & Resepsionis, Cafe",
+                "targetSceneId": "scene9"
+            }
+        ]
+    },
+    {
+        "id": "scene9",
+        "name": "Cottage & Glamping, Meeting Room & Resepsionis, Cafe",
+        "imageFile": "9_jalan_kebun_ke_tempatmeet.jpg",
+        "hotspots": [
+            {
+                "id": "nav-scene9-scene8",
+                "type": "navigate",
+                "pitch": 0,
+                "yaw": 180,
+                "title": "Green House dan Kolam Renang",
+                "targetSceneId": "scene8"
+            },
+            {
+                "id": "nav-scene9-scene10",
+                "type": "navigate",
+                "pitch": -9.58,
+                "yaw": 74.76,
+                "title": "Cottage & Glamping, Meeting Room & Resepsionis, Cafe",
+                "targetSceneId": "scene10"
+            }
+        ]
+    },
+    {
+        "id": "scene10",
+        "name": "Cottage & Glamping, Meeting Room & Resepsionis, Cafe",
+        "imageFile": "10_jalan_ke_tempatmeet.jpg",
+        "hotspots": [
+            {
+                "id": "nav-scene10-scene9",
+                "type": "navigate",
+                "pitch": 0,
+                "yaw": 180,
+                "title": "Back to Jalan Kebun ke Tempat Meet",
+                "targetSceneId": "scene9"
+            },
+            {
+                "id": "nav-scene10-scene11",
+                "type": "navigate",
+                "pitch": 0,
+                "yaw": 0,
+                "title": "Go to Tempat Meet",
+                "targetSceneId": "scene11"
+            }
+        ]
+    },
+    {
+        "id": "scene11",
+        "name": "Tempat Meet",
+        "imageFile": "11_tempatmeet.jpg",
+        "hotspots": [
+            {
+                "id": "nav-scene11-scene10",
+                "type": "navigate",
+                "pitch": 0,
+                "yaw": 180,
+                "title": "Back to Jalan ke Tempat Meet",
+                "targetSceneId": "scene10"
+            },
+            {
+                "id": "nav-scene11-scene12",
+                "type": "navigate",
+                "pitch": 0,
+                "yaw": 0,
+                "title": "Go to Cottage",
+                "targetSceneId": "scene12"
+            }
+        ]
+    },
+    {
+        "id": "scene12",
+        "name": "Cottage",
+        "imageFile": "12_cotage.jpg",
+        "hotspots": [
+            {
+                "id": "nav-scene12-scene11",
+                "type": "navigate",
+                "pitch": 0,
+                "yaw": 180,
+                "title": "Back to Tempat Meet",
+                "targetSceneId": "scene11"
+            },
+            {
+                "id": "nav-scene12-scene13",
+                "type": "navigate",
+                "pitch": 0,
+                "yaw": 0,
+                "title": "Go to Pintu Depan Cottage",
+                "targetSceneId": "scene13"
+            }
+        ]
+    },
+    {
+        "id": "scene13",
+        "name": "Pintu Depan Cottage",
+        "imageFile": "13_pintu_depan_cotage.jpg",
+        "hotspots": [
+            {
+                "id": "nav-scene13-scene12",
+                "type": "navigate",
+                "pitch": 0,
+                "yaw": 180,
+                "title": "Back to Cottage",
+                "targetSceneId": "scene12"
+            },
+            {
+                "id": "nav-scene13-scene14",
+                "type": "navigate",
+                "pitch": 0,
+                "yaw": 0,
+                "title": "Go to Taman & Jalan Bebek Air",
+                "targetSceneId": "scene14"
+            }
+        ]
+    },
+    {
+        "id": "scene14",
+        "name": "Taman & Jalan Bebek Air",
+        "imageFile": "14_taman_&jalan_bebekair-cootage.jpg",
+        "hotspots": [
+            {
+                "id": "nav-scene14-scene13",
+                "type": "navigate",
+                "pitch": 0,
+                "yaw": 180,
+                "title": "Back to Pintu Depan Cottage",
+                "targetSceneId": "scene13"
+            },
+            {
+                "id": "nav-scene14-scene15",
+                "type": "navigate",
+                "pitch": 0,
+                "yaw": 0,
+                "title": "Go to Bebek Air",
+                "targetSceneId": "scene15"
+            }
+        ]
+    },
+    {
+        "id": "scene15",
+        "name": "Bebek Air",
+        "imageFile": "15_bebek_air.jpg",
+        "hotspots": [
+            {
+                "id": "nav-scene15-scene14",
+                "type": "navigate",
+                "pitch": 0,
+                "yaw": 180,
+                "title": "Back to Taman & Jalan Bebek Air",
+                "targetSceneId": "scene14"
+            },
+            {
+                "id": "nav-scene15-scene16",
+                "type": "navigate",
+                "pitch": 0,
+                "yaw": 0,
+                "title": "Go to Jeep & Kuda Kreta",
+                "targetSceneId": "scene16"
+            }
+        ]
+    },
+    {
+        "id": "scene16",
+        "name": "Jeep, Kuda, Kereta, Sepeda Air",
+        "imageFile": "16_jeep_kuda_kreta.jpg",
+        "hotspots": [
+            {
+                "id": "nav-scene16-scene15",
+                "type": "navigate",
+                "pitch": 0,
+                "yaw": 180,
+                "title": "Back to Bebek Air",
+                "targetSceneId": "scene15"
+            }
+        ]
+    }
+]
