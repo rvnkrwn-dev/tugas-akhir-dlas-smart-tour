@@ -1,0 +1,1 @@
+import { PrismaClient } from './generated/prisma/client'; const prisma = new PrismaClient(); async function main() { const count = await prisma.tour_hotspots.count(); console.log('Hotspots count:', count); const loket = await prisma.tour_hotspots.findMany({ where: { type: 'loket' } }); console.log('Loket hotspots:', loket); } main();
