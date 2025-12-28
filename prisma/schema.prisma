@@ -1,0 +1,449 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+model activity_logs {
+  id          String                  @id @default(uuid()) @db.VarChar(36)
+  userId      String?                 @db.VarChar(36)
+  userRole    activity_logs_userRole?
+  action      String                  @db.VarChar(100)
+  entityType  String?                 @db.VarChar(50)
+  entityId    String?                 @db.VarChar(36)
+  description String?                 @db.VarChar(1000)
+  metadata    Json?
+  ipAddress   String?                 @db.VarChar(45)
+  userAgent   String?                 @db.VarChar(1000)
+  createdAt   DateTime                @default(now()) @db.Timestamp(0)
+  users       users?                  @relation(fields: [userId], references: [id])
+
+  @@index([userId, createdAt], map: "idx_activity_logs_user_created")
+}
+
+model attractions {
+  id                String              @id @default(uuid()) @db.VarChar(36)
+  name              String              @db.VarChar(255)
+  slug              String              @unique @db.VarChar(300)
+  description       String?             @db.Text
+  shortDescription  String?             @db.VarChar(500)
+  type              String?             @db.VarChar(100)
+  adultPrice        Decimal             @db.Decimal(10, 2)
+  childPrice        Decimal?            @db.Decimal(10, 2)
+  currency          String              @default("IDR") @db.VarChar(3)
+  imageUrl          String?             @db.VarChar(1000)
+  imageUrls         Json?
+  operatingHours    Json?
+  capacity          Int?                @db.UnsignedInt
+  durationMinutes   Int?                @db.UnsignedSmallInt
+  minAge            Int?                @db.UnsignedTinyInt
+  maxAge            Int?                @db.UnsignedTinyInt
+  isActive          Boolean             @default(true)
+  priority          Int?                @default(0) @db.UnsignedSmallInt
+  createdAt         DateTime            @default(now()) @db.Timestamp(0)
+  updatedAt         DateTime            @updatedAt @db.Timestamp(0)
+  cart_items        cart_items[]
+  ticket_details    ticket_details[]
+  tour_hotspots     tour_hotspots[]
+  transaction_items transaction_items[]
+
+  @@index([isActive, priority], map: "idx_attractions_active_priority")
+  @@index([slug], map: "idx_attractions_slug")
+  @@index([type, isActive], map: "idx_attractions_type_active")
+}
+
+model cart_items {
+  id           String      @id @default(uuid()) @db.VarChar(36)
+  cartId       String      @db.VarChar(36)
+  attractionId String      @db.VarChar(36)
+  ticketType   String      @default("adult") @db.VarChar(20)
+  quantity     Int         @db.UnsignedSmallInt
+  visitDate    DateTime    @db.Date
+  unitPrice    Decimal     @db.Decimal(10, 2)
+  totalPrice   Decimal     @db.Decimal(12, 2)
+  createdAt    DateTime    @default(now()) @db.Timestamp(0)
+  updatedAt    DateTime    @updatedAt @db.Timestamp(0)
+  attractions  attractions @relation(fields: [attractionId], references: [id])
+  carts        carts       @relation(fields: [cartId], references: [id], onDelete: Cascade)
+
+  @@unique([cartId, attractionId, ticketType, visitDate], map: "unq_cart_items_unique_item")
+  @@index([attractionId], map: "cart_items_attractionId_fkey")
+  @@index([cartId, createdAt], map: "idx_cart_items_cart_created")
+  @@index([visitDate], map: "idx_cart_items_visit_date")
+  @@index([ticketType], map: "idx_cart_items_ticket_type")
+}
+
+model carts {
+  id         String       @id @default(uuid()) @db.VarChar(36)
+  userId     String       @db.VarChar(36)
+  sessionId  String?      @db.VarChar(128)
+  expiresAt  DateTime?    @db.Timestamp(0)
+  createdAt  DateTime     @default(now()) @db.Timestamp(0)
+  updatedAt  DateTime     @updatedAt @db.Timestamp(0)
+  cart_items cart_items[]
+  users      users        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId], map: "idx_carts_session_id")
+  @@index([userId], map: "idx_carts_user_id")
+}
+
+model email_verifications {
+  id         String    @id @default(uuid()) @db.VarChar(36)
+  email      String    @db.VarChar(320)
+  token      String    @db.Text
+  userId     String    @db.VarChar(36)
+  expiresAt  DateTime  @db.Timestamp(0)
+  verifiedAt DateTime? @db.Timestamp(0)
+  createdAt  DateTime  @default(now()) @db.Timestamp(0)
+  users      users     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId], map: "idx_email_verifications_user_id")
+}
+
+model password_resets {
+  id        String    @id @default(uuid()) @db.VarChar(36)
+  email     String    @db.VarChar(320)
+  token     String    @db.Text
+  userId    String    @db.VarChar(36)
+  expiresAt DateTime  @db.Timestamp(0)
+  usedAt    DateTime? @db.Timestamp(0)
+  createdAt DateTime  @default(now()) @db.Timestamp(0)
+  users     users     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId], map: "idx_password_resets_user_id")
+}
+
+model payments {
+  id                    String                @id @default(uuid()) @db.VarChar(36)
+  transactionId         String                @db.VarChar(36)
+  amount                Decimal               @db.Decimal(12, 2)
+  currency              String                @default("IDR") @db.VarChar(3)
+  method                String?
+  status                payments_status       @default(PENDING)
+  gatewayRef            String?               @db.VarChar(255)
+  gatewayData           Json?
+  paidAt                DateTime?             @db.Timestamp(0)
+  createdAt             DateTime              @default(now()) @db.Timestamp(0)
+  updatedAt             DateTime              @updatedAt @db.Timestamp(0)
+  purchase_transactions purchase_transactions @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  @@index([transactionId], map: "idx_payments_transaction_id")
+  @@index([status], map: "idx_payments_status")
+  @@index([transactionId, status], map: "idx_payments_transaction_status")
+}
+
+model purchase_transactions {
+  id                String                       @id @default(uuid()) @db.VarChar(36)
+  userId            String                       @db.VarChar(36)
+  transactionCode   String                       @unique @db.VarChar(50)
+  totalAmount       Decimal                      @db.Decimal(12, 2)
+  currency          String                       @default("IDR") @db.VarChar(3)
+  status            purchase_transactions_status @default(PENDING)
+  customerInfo      Json?
+  createdAt         DateTime                     @default(now()) @db.Timestamp(0)
+  updatedAt         DateTime                     @updatedAt @db.Timestamp(0)
+  completedAt       DateTime?                    @db.Timestamp(0)
+  payments          payments[]
+  users             users                        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tickets           tickets?
+  transaction_items transaction_items[]
+
+  @@index([createdAt], map: "idx_transactions_created_at")
+  @@index([userId, status], map: "idx_transactions_user_status")
+  @@index([transactionCode], map: "idx_transactions_code")
+  @@index([status, createdAt], map: "idx_transactions_status_created")
+}
+
+model refresh_tokens {
+  id        String   @id @default(uuid()) @db.VarChar(36)
+  token     String   @db.Text
+  userId    String   @db.VarChar(36)
+  expiresAt DateTime @db.Timestamp(0)
+  createdAt DateTime @default(now()) @db.Timestamp(0)
+  users     users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId], map: "idx_refresh_tokens_user_id")
+}
+
+model rate_limits {
+  key       String   @id @db.VarChar(255)
+  points    Int      @default(0)
+  expireAt  DateTime @db.Timestamp(0)
+  createdAt DateTime @default(now()) @db.Timestamp(0)
+  updatedAt DateTime @updatedAt @db.Timestamp(0)
+
+  @@index([expireAt], map: "idx_rate_limits_expire_at")
+}
+
+model ticket_details {
+  id           String      @id @default(uuid()) @db.VarChar(36)
+  ticketId     String      @db.VarChar(36)
+  attractionId String      @db.VarChar(36)
+  ticketType   String      @db.VarChar(20)
+  totalQty     Int         @db.UnsignedSmallInt
+  usedQty      Int         @default(0) @db.UnsignedSmallInt
+  remainingQty Int         @default(0) @db.UnsignedSmallInt
+  visitDate    DateTime?   @db.Date
+  timeSlot     String?     @db.VarChar(50)
+  createdAt    DateTime    @default(now()) @db.Timestamp(0)
+  updatedAt    DateTime    @updatedAt @db.Timestamp(0)
+  attractions  attractions @relation(fields: [attractionId], references: [id])
+  tickets      tickets     @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@unique([ticketId, attractionId], map: "unq_ticket_detail_per_attraction")
+  @@index([attractionId], map: "idx_ticket_details_attraction")
+  @@index([ticketId], map: "idx_ticket_details_ticket")
+}
+
+model tickets {
+  id                    String                @id @default(uuid()) @db.VarChar(36)
+  transactionId         String                @unique @db.VarChar(36)
+  ticketCode            String                @unique @db.VarChar(100)
+  qrCode                String                @unique @db.VarChar(500)
+  visitDateFrom         DateTime?             @db.Date
+  visitDateTo           DateTime?             @db.Date
+  status                tickets_status        @default(ACTIVE)
+  validFrom             DateTime?             @db.Timestamp(0)
+  validUntil            DateTime?             @db.Timestamp(0)
+  usedAt                DateTime?             @db.Timestamp(0)
+  usedCount             Int                   @default(0) @db.UnsignedSmallInt
+  ticketData            Json?
+  createdAt             DateTime              @default(now()) @db.Timestamp(0)
+  updatedAt             DateTime              @updatedAt @db.Timestamp(0)
+  ticket_details        ticket_details[]
+  purchase_transactions purchase_transactions @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  @@index([ticketCode], map: "idx_tickets_code")
+  @@index([status, validFrom, validUntil], map: "idx_tickets_status_validity")
+}
+
+model transaction_items {
+  id                    String                @id @default(uuid()) @db.VarChar(36)
+  transactionId         String                @db.VarChar(36)
+  attractionId          String                @db.VarChar(36)
+  ticketType            String                @db.VarChar(20)
+  quantity              Int                   @db.UnsignedSmallInt
+  visitDate             DateTime              @db.Date
+  unitPrice             Decimal               @db.Decimal(10, 2)
+  totalPrice            Decimal               @db.Decimal(12, 2)
+  itemData              Json?
+  createdAt             DateTime              @default(now()) @db.Timestamp(0)
+  attractions           attractions           @relation(fields: [attractionId], references: [id])
+  purchase_transactions purchase_transactions @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  @@index([attractionId], map: "idx_transaction_items_attraction_id")
+  @@index([transactionId], map: "idx_transaction_items_transaction_id")
+}
+
+model user_profiles {
+  id          String                 @id @default(uuid()) @db.VarChar(36)
+  userId      String                 @unique @db.VarChar(36)
+  firstName   String?                @db.VarChar(100)
+  lastName    String?                @db.VarChar(100)
+  phone       String?                @db.VarChar(20)
+  avatarUrl   String?                @db.VarChar(1000)
+  dateOfBirth DateTime?              @db.Date
+  gender      user_profiles_gender?
+  address     String?                @db.VarChar(500)
+  city        String?                @db.VarChar(100)
+  country     String?                @db.VarChar(100)
+  postalCode  String?                @db.VarChar(20)
+  language    user_profiles_language @default(INDONESIAN)
+  createdAt   DateTime               @default(now()) @db.Timestamp(0)
+  updatedAt   DateTime               @updatedAt @db.Timestamp(0)
+  users       users                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([city, country], map: "idx_user_profiles_location")
+}
+
+model users {
+  id                    String                  @id @default(uuid()) @db.VarChar(36)
+  email                 String                  @unique @db.VarChar(320)
+  password              String?                 @db.VarChar(255)
+  role                  users_role              @default(CUSTOMER)
+  isActive              Boolean                 @default(true)
+  isEmailVerified       Boolean                 @default(false)
+  lastLoginAt           DateTime?               @db.Timestamp(0)
+  createdAt             DateTime                @default(now()) @db.Timestamp(0)
+  updatedAt             DateTime                @updatedAt @db.Timestamp(0)
+  activity_logs         activity_logs[]
+  carts                 carts[]
+  email_verifications   email_verifications[]
+  notifications         notification[]
+  password_resets       password_resets[]
+  purchase_transactions purchase_transactions[]
+  refresh_tokens        refresh_tokens[]
+  user_profiles         user_profiles?
+
+  @@index([lastLoginAt], map: "idx_users_last_login")
+  @@index([role, isActive], map: "idx_users_role_active")
+}
+
+model testimonials {
+  id          String              @id @default(uuid()) @db.VarChar(36)
+  name        String?             @db.VarChar(100)
+  location    String?             @db.VarChar(100)
+  rating      Int?                @db.UnsignedTinyInt
+  comment     String?             @db.Text
+  avatarColor String?             @db.VarChar(50)
+  status      testimonials_status @default(PENDING)
+  token       String?             @db.VarChar(255)
+  isCompleted Boolean             @default(false)
+  isPublished Boolean             @default(false)
+  createdAt   DateTime            @default(now()) @db.Timestamp(0)
+  updatedAt   DateTime            @updatedAt @db.Timestamp(0)
+
+  @@index([isPublished], map: "idx_testimonials_is_published")
+}
+
+model tour_scenes {
+  id              String          @id @default(uuid()) @db.VarChar(36)
+  name            String          @db.VarChar(255)
+  description     String?         @db.Text
+  imageUrlLow     String          @db.VarChar(1000)
+  imageUrlHigh    String          @db.VarChar(1000)
+  defaultPitch    Float           @default(0)
+  defaultYaw      Float           @default(0)
+  hfov            Float           @default(100)
+  isActive        Boolean         @default(true)
+  sequence        Int             @default(0)
+  createdAt       DateTime        @default(now()) @db.Timestamp(0)
+  updatedAt       DateTime        @updatedAt @db.Timestamp(0)
+  hotspots        tour_hotspots[]
+  target_hotspots tour_hotspots[] @relation("TargetScene")
+
+  @@index([isActive], map: "idx_tour_scenes_active")
+  @@index([sequence], map: "idx_tour_scenes_sequence")
+}
+
+model tour_hotspots {
+  id            String             @id @default(uuid()) @db.VarChar(36)
+  sceneId       String             @db.VarChar(36)
+  type          tour_hotspots_type
+  pitch         Float
+  yaw           Float
+  title         String             @db.VarChar(255)
+  description   String?            @db.Text
+  icon          String?            @db.VarChar(50)
+  productId     String?            @db.VarChar(36)
+  targetSceneId String?            @db.VarChar(36)
+  createdAt     DateTime           @default(now()) @db.Timestamp(0)
+  updatedAt     DateTime           @updatedAt @db.Timestamp(0)
+  attraction    attractions?       @relation(fields: [productId], references: [id])
+  scene         tour_scenes        @relation(fields: [sceneId], references: [id], onDelete: Cascade)
+  targetScene   tour_scenes?       @relation("TargetScene", fields: [targetSceneId], references: [id])
+
+  @@index([sceneId], map: "idx_tour_hotspots_scene")
+  @@index([type], map: "idx_tour_hotspots_type")
+  @@index([productId], map: "tour_hotspots_productId_fkey")
+  @@index([targetSceneId], map: "tour_hotspots_targetSceneId_fkey")
+}
+
+model inbox {
+  id        String   @id @default(uuid()) @db.VarChar(36)
+  fullName  String   @db.VarChar(255)
+  email     String   @db.VarChar(320)
+  phone     String   @db.VarChar(20)
+  subject   String   @db.VarChar(255)
+  message   String   @db.Text
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now()) @db.Timestamp(0)
+  updatedAt DateTime @updatedAt @db.Timestamp(0)
+}
+
+model notification {
+  id        String           @id @default(cuid())
+  type      notificationType
+  title     String
+  message   String           @db.Text
+  metadata  Json?
+  isRead    Boolean          @default(false)
+  userId    String?
+  createdAt DateTime         @default(now())
+  readAt    DateTime?
+  users     users?           @relation(fields: [userId], references: [id])
+
+  @@index([userId], map: "notification_userId_fkey")
+}
+
+enum testimonials_status {
+  APPROVED
+  PENDING
+  REJECTED
+}
+
+enum activity_logs_userRole {
+  SUPER_ADMIN
+  ADMIN
+  SCANNER
+  CUSTOMER
+}
+
+enum users_role {
+  SUPER_ADMIN
+  ADMIN
+  SCANNER
+  CUSTOMER
+}
+
+enum payments_status {
+  PENDING
+  CAPTURED
+  SETTLED
+  FAILED
+  CANCELLED
+  REFUNDED
+}
+
+enum purchase_transactions_status {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+  REFUNDED
+}
+
+enum tickets_status {
+  ACTIVE
+  PARTIALLY_USED
+  FULLY_USED
+  EXPIRED
+  CANCELLED
+  REFUNDED
+}
+
+enum user_profiles_gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum user_profiles_language {
+  ENGLISH
+  INDONESIAN
+}
+
+enum tour_hotspots_type {
+  info
+  loket
+  navigate
+}
+
+enum notificationType {
+  REVIEW_SUBMITTED
+  REVIEW_REQUEST_SENT
+  CRITICAL_ERROR
+  SYSTEM_ALERT
+  INBOX
+}
+
+model system_settings {
+  key         String   @id @db.VarChar(50)
+  value       Json
+  description String?  @db.VarChar(255)
+  updatedAt   DateTime @updatedAt
+}
