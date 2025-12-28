@@ -3,6 +3,14 @@ set -e
 
 echo "🚀 Starting Deployment..."
 
+# Load NVM (Fix for non-interactive SSH)
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+
+# Verify Node/Yarn Version
+echo "Using Node: $(node -v)"
+echo "Using Yarn: $(yarn -v)"
+
 # Go to project dir
 cd /var/www/dlas
 
