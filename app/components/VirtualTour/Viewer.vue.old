@@ -1,0 +1,927 @@
+<template>
+    <ClientOnly>
+        <Transition enter-active-class="transition ease-out duration-300 transform"
+            enter-from-class="opacity-0 scale-95" enter-to-class="opacity-100 scale-100"
+            leave-active-class="transition ease-in duration-200 transform" leave-from-class="opacity-100 scale-100"
+            leave-to-class="opacity-0 scale-95">
+            <div v-if="isTourOpen" ref="tourContainer" class="fixed inset-0 z-50 bg-black">
+                <!-- Viewer Container -->
+                <div id="panorama" class="w-full h-full"></div>
+
+                <!-- Gradient Overlay for UI readability -->
+                <div
+                    class="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/80 to-transparent pointer-events-none">
+                </div>
+                <div
+                    class="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black/90 via-black/50 to-transparent pointer-events-none">
+                </div>
+
+                <!-- Top Bar: Info & Close -->
+                <div class="absolute top-0 left-0 right-0 p-4 sm:p-6 flex justify-between items-start z-10">
+                    <div class="flex items-center gap-3">
+                        <div class="bg-white/10 backdrop-blur-md rounded-2xl p-3 border border-white/20">
+                            <h2 class="text-white font-black text-lg sm:text-xl drop-shadow-md">
+                                {{ currentScene?.title || 'Virtual Tour' }}
+                            </h2>
+                            <p class="text-white/80 text-xs font-medium flex items-center gap-1.5">
+                                <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                                Live 360° View
+                                <span v-if="isVRMode" class="ml-2 text-purple-400">🥽 VR Mode</span>
+                                <span v-else-if="gyroEnabled" class="ml-2 text-yellow-400">📱 Gyro Active</span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-2">
+                        <!-- Gyroscope Toggle (only show if available) -->
+                        <button v-if="hasGyro" @click="toggleGyroscope" :class="[
+                            'group backdrop-blur-md p-2.5 rounded-full border border-white/20 transition-all',
+                            gyroEnabled ? 'bg-yellow-500/30 hover:bg-yellow-500/40' : 'bg-white/10 hover:bg-white/20'
+                        ]">
+                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                            </svg>
+                        </button>
+
+                        <!-- VR Mode Toggle -->
+                        <button @click="toggleVRMode" :class="[
+                            'group backdrop-blur-md p-2.5 rounded-full border border-white/20 transition-all',
+                            isVRMode ? 'bg-purple-500/30 hover:bg-purple-500/40' : 'bg-white/10 hover:bg-white/20'
+                        ]" :title="isVRMode ? 'Exit VR Mode' : 'Enter VR Mode'">
+                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                            </svg>
+                        </button>
+
+                        <!-- Fullscreen Toggle -->
+                        <button @click="toggleFullscreen"
+                            class="group bg-white/10 backdrop-blur-md hover:bg-white/20 p-2.5 rounded-full border border-white/20 transition-all">
+                            <svg v-if="!isFullscreen" class="w-6 h-6 text-white" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                            </svg>
+                            <svg v-else class="w-6 h-6 text-white" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+
+                        <!-- Close Button -->
+                        <button @click="handleCloseTour"
+                            class="group bg-white/10 backdrop-blur-md hover:bg-white/20 p-2.5 rounded-full border border-white/20 transition-all hover:rotate-90">
+                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Bottom Bar: Actions -->
+                <div
+                    class="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-4 w-full px-4 z-10">
+                    <!-- Nav Hints -->
+                    <div class="flex gap-4 text-white/50 text-sm font-medium animate-pulse">
+                        <span v-if="!gyroEnabled" class="flex items-center gap-1">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
+                            </svg>
+                            Drag to look around
+                        </span>
+                        <span v-else class="flex items-center gap-1 text-yellow-400">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                            </svg>
+                            Move your device to look around
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Loading State -->
+                <Transition enter-active-class="transition ease-out duration-200" enter-from-class="opacity-0"
+                    enter-to-class="opacity-100" leave-active-class="transition ease-in duration-150"
+                    leave-from-class="opacity-100" leave-to-class="opacity-0">
+                    <div v-if="isPanoramaLoading"
+                        class="absolute inset-0 flex items-center justify-center z-40 bg-black/80 backdrop-blur-sm">
+                        <div class="flex flex-col items-center gap-4">
+                            <div class="w-16 h-16 border-4 border-white/20 border-t-white rounded-full animate-spin">
+                            </div>
+                            <p class="text-white font-semibold">Loading panorama...</p>
+                        </div>
+                    </div>
+                </Transition>
+
+                <!-- Error State -->
+                <Transition enter-active-class="transition ease-out duration-200" enter-from-class="opacity-0 scale-95"
+                    enter-to-class="opacity-100 scale-100" leave-active-class="transition ease-in duration-150"
+                    leave-from-class="opacity-100 scale-100" leave-to-class="opacity-0 scale-95">
+                    <div v-if="panoramaLoadError"
+                        class="absolute inset-0 flex items-center justify-center z-40 bg-black/90 backdrop-blur-sm">
+                        <div class="bg-white rounded-3xl p-8 max-w-md mx-4 text-center">
+                            <div
+                                class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </div>
+                            <h3 class="text-2xl font-black text-gray-900 mb-2">Failed to Load</h3>
+                            <p class="text-gray-600 mb-6">{{ panoramaLoadError }}</p>
+                            <div class="flex gap-3">
+                                <button @click="handleCloseTour"
+                                    class="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition-colors">
+                                    Close
+                                </button>
+                                <button @click="retryLoadPanorama"
+                                    class="flex-1 px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white font-bold rounded-xl shadow-lg transition-all active:scale-95">
+                                    Retry
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </Transition>
+
+                <!-- iOS Permission Dialog -->
+                <Transition enter-active-class="transition ease-out duration-200" enter-from-class="opacity-0 scale-95"
+                    enter-to-class="opacity-100 scale-100" leave-active-class="transition ease-in duration-150"
+                    leave-from-class="opacity-100 scale-100" leave-to-class="opacity-0 scale-95">
+                    <div v-if="showPermissionDialog"
+                        class="absolute inset-0 flex items-center justify-center z-30 bg-black/70 backdrop-blur-sm">
+                        <div class="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full mx-4 shadow-2xl">
+                            <div class="flex flex-col items-center text-center">
+                                <div class="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mb-4">
+                                    <svg class="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                    </svg>
+                                </div>
+                                <h3 class="text-2xl font-black text-gray-900 mb-2">Enable Gyroscope?</h3>
+                                <p class="text-gray-600 mb-6">
+                                    Allow access to your device's motion sensors to control the view by moving your
+                                    device.
+                                </p>
+                                <div class="flex gap-3 w-full">
+                                    <button @click="showPermissionDialog = false"
+                                        class="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition-colors">
+                                        Cancel
+                                    </button>
+                                    <button @click="requestGyroPermission"
+                                        class="flex-1 px-6 py-3 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white font-bold rounded-xl shadow-lg shadow-yellow-500/50 transition-all active:scale-95">
+                                        Allow
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </Transition>
+
+                <!-- Ticket Purchase Dialog -->
+                <Transition enter-active-class="transition ease-out duration-200" enter-from-class="opacity-0 scale-95"
+                    enter-to-class="opacity-100 scale-100" leave-active-class="transition ease-in duration-150"
+                    leave-from-class="opacity-100 scale-100" leave-to-class="opacity-0 scale-95">
+                    <div v-if="showTicketDialog && selectedHotspot"
+                        class="absolute inset-0 flex items-center justify-center z-20 bg-black/50 backdrop-blur-sm"
+                        @click.self="showTicketDialog = false">
+                        <div class="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full mx-4 shadow-2xl">
+                            <div class="flex justify-between items-start mb-4">
+                                <div>
+                                    <h3 class="text-2xl font-black text-gray-900">{{ selectedHotspot.title }}</h3>
+                                    <p class="text-sm text-gray-500 mt-1">{{ selectedHotspot.attractionName }}</p>
+                                </div>
+                                <button @click="showTicketDialog = false"
+                                    class="text-gray-400 hover:text-gray-600 transition-colors">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+
+                            <p class="text-gray-600 mb-6">{{ selectedHotspot.description }}</p>
+
+                            <div class="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-4 mb-6">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-gray-700 font-semibold">Harga Tiket</span>
+                                    <span class="text-2xl font-black text-green-600">{{
+                                        formatPrice(selectedHotspot.price) }}</span>
+                                </div>
+                                <p class="text-xs text-gray-500 mt-1">Per orang ({{ selectedHotspot.ticketType ===
+                                    'adult'
+                                    ? 'Dewasa' : 'Anak-anak' }})</p>
+                            </div>
+
+                            <div class="flex gap-3">
+                                <button @click="showTicketDialog = false"
+                                    class="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition-colors">
+                                    Batal
+                                </button>
+                                <button @click="addToCartFromHotspot"
+                                    class="flex-1 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-bold rounded-xl shadow-lg shadow-green-500/50 transition-all active:scale-95 flex items-center justify-center gap-2">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                                    </svg>
+                                    Tambah ke Keranjang
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </Transition>
+
+                <!-- Info Dialog -->
+                <Transition enter-active-class="transition ease-out duration-200" enter-from-class="opacity-0 scale-95"
+                    enter-to-class="opacity-100 scale-100" leave-active-class="transition ease-in duration-150"
+                    leave-from-class="opacity-100 scale-100" leave-to-class="opacity-0 scale-95">
+                    <div v-if="showInfoDialog && selectedHotspot"
+                        class="absolute inset-0 flex items-center justify-center z-20 bg-black/50 backdrop-blur-sm"
+                        @click.self="showInfoDialog = false">
+                        <div class="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full mx-4 shadow-2xl">
+                            <div class="flex justify-between items-start mb-4">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                                        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor"
+                                            viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                    </div>
+                                    <h3 class="text-2xl font-black text-gray-900">{{ selectedHotspot.title }}</h3>
+                                </div>
+                                <button @click="showInfoDialog = false"
+                                    class="text-gray-400 hover:text-gray-600 transition-colors">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+
+                            <p class="text-gray-600 leading-relaxed">{{ selectedHotspot.description }}</p>
+
+                            <button @click="showInfoDialog = false"
+                                class="mt-6 w-full px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white font-bold rounded-xl shadow-lg shadow-blue-500/50 transition-all active:scale-95">
+                                Tutup
+                            </button>
+                        </div>
+                    </div>
+                </Transition>
+            </div>
+        </Transition>
+    </ClientOnly>
+</template>
+
+<script setup lang="ts">
+import { onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { useCartStore } from '~/stores/cart'
+
+const { isTourOpen, currentScene, closeTour, isVRMode: isVRModeGlobal, toggleVRMode: toggleVRModeGlobal, exitVRMode, loadScene, getCurrentSceneId } = useVirtualTour()
+const cartStore = useCartStore()
+const { alert } = useAlert()
+
+let viewer: any = null
+const tourContainer = ref<HTMLElement | null>(null)
+
+// Hotspot dialog states
+const showTicketDialog = ref(false)
+const showInfoDialog = ref(false)
+const selectedHotspot = ref<any>(null)
+
+// Fullscreen state
+const isFullscreen = ref(false)
+
+// VR states
+const isVRMode = computed(() => isVRModeGlobal.value)
+const hasVRSupport = ref(false)
+const vrSession = ref<any>(null)
+
+// Loading states
+const isPanoramaLoading = ref(false)
+const panoramaLoadError = ref<string | null>(null)
+
+// Gyroscope states
+const hasGyro = ref(false)
+const gyroEnabled = ref(false)
+const showPermissionDialog = ref(false)
+let orientationHandler: ((event: DeviceOrientationEvent) => void) | null = null
+
+// Initial device orientation for calibration
+let initialAlpha: number | null = null
+let initialBeta: number | null = null
+let initialGamma: number | null = null
+
+const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        minimumFractionDigits: 0
+    }).format(price)
+}
+
+// Fullscreen functions
+const enterFullscreen = async () => {
+    if (!tourContainer.value) return
+
+    try {
+        if (tourContainer.value.requestFullscreen) {
+            await tourContainer.value.requestFullscreen()
+        } else if ((tourContainer.value as any).webkitRequestFullscreen) {
+            await (tourContainer.value as any).webkitRequestFullscreen()
+        } else if ((tourContainer.value as any).mozRequestFullScreen) {
+            await (tourContainer.value as any).mozRequestFullScreen()
+        } else if ((tourContainer.value as any).msRequestFullscreen) {
+            await (tourContainer.value as any).msRequestFullscreen()
+        }
+        isFullscreen.value = true
+    } catch (error) {
+        console.error('Failed to enter fullscreen:', error)
+    }
+}
+
+const exitFullscreen = async () => {
+    try {
+        if (document.exitFullscreen) {
+            await document.exitFullscreen()
+        } else if ((document as any).webkitExitFullscreen) {
+            await (document as any).webkitExitFullscreen()
+        } else if ((document as any).mozCancelFullScreen) {
+            await (document as any).mozCancelFullScreen()
+        } else if ((document as any).msExitFullscreen) {
+            await (document as any).msExitFullscreen()
+        }
+        isFullscreen.value = false
+    } catch (error) {
+        console.error('Failed to exit fullscreen:', error)
+    }
+}
+
+const toggleFullscreen = () => {
+    if (isFullscreen.value) {
+        exitFullscreen()
+    } else {
+        enterFullscreen()
+    }
+}
+
+// Orientation lock functions
+const lockOrientation = async () => {
+    try {
+        if (screen.orientation && (screen.orientation as any).lock) {
+            await (screen.orientation as any).lock('landscape')
+        }
+    } catch (error) {
+        // console.log('Orientation lock not supported or failed:', error)
+    }
+}
+
+const unlockOrientation = () => {
+    try {
+        if (screen.orientation && (screen.orientation as any).unlock) {
+            (screen.orientation as any).unlock()
+        }
+    } catch (error) {
+        // console.log('Orientation unlock failed:', error)
+    }
+}
+
+// VR Mode functions
+const checkVRSupport = async () => {
+    if (typeof navigator !== 'undefined' && 'xr' in navigator) {
+        try {
+            const isSupported = await (navigator as any).xr.isSessionSupported('immersive-vr')
+            hasVRSupport.value = isSupported
+        } catch (error) {
+        // console.log('WebXR not supported:', error)
+            hasVRSupport.value = false
+        }
+    } else {
+        hasVRSupport.value = false
+    }
+}
+
+const enterVRMode = async () => {
+    if (!viewer) return
+
+    // Try WebXR first (for modern VR headsets)
+    if (hasVRSupport.value && typeof navigator !== 'undefined' && 'xr' in navigator) {
+        try {
+            const session = await (navigator as any).xr.requestSession('immersive-vr', {
+                optionalFeatures: ['local-floor', 'bounded-floor']
+            })
+            vrSession.value = session
+
+            // Enable gyroscope for VR mode
+            if (!gyroEnabled.value && hasGyro.value) {
+                enableGyroscope()
+            }
+
+            alert.success('VR Mode', 'VR mode activated! Put on your headset.')
+
+            // Handle session end
+            session.addEventListener('end', () => {
+                exitVRMode()
+                vrSession.value = null
+            })
+        } catch (error) {
+            console.error('Failed to start VR session:', error)
+            alert.error('VR Not Available', 'WebXR is not supported on this device. VR mode requires a VR headset with WebXR support.')
+            exitVRMode()
+        }
+    } else {
+        // No WebXR support
+        alert.error('VR Not Available', 'VR mode requires a WebXR-compatible device (Oculus Quest, etc.). Google Cardboard is not currently supported.')
+        exitVRMode()
+    }
+}
+
+const enterStereoMode = () => {
+    // DEPRECATED: Stereo mode removed due to technical limitations
+    // Pannellum doesn't support proper side-by-side stereo rendering
+    alert.error('VR Not Available', 'VR mode requires a WebXR-compatible VR headset.')
+    exitVRMode()
+}
+
+const exitVRModeLocal = async () => {
+    // Exit WebXR session if active
+    if (vrSession.value) {
+        try {
+            await vrSession.value.end()
+        } catch (error) {
+            console.error('Error ending VR session:', error)
+        }
+        vrSession.value = null
+    }
+
+    // Remove stereo mode
+    const panoramaEl = document.getElementById('panorama')
+    if (panoramaEl) {
+        panoramaEl.classList.remove('vr-stereo-mode')
+    }
+
+    // Disable gyroscope if it was auto-enabled by VR mode
+    if (gyroEnabled.value) {
+        disableGyroscope()
+    }
+
+    exitVRMode()
+}
+
+const toggleVRMode = async () => {
+    if (isVRMode.value) {
+        await exitVRModeLocal()
+    } else {
+        toggleVRModeGlobal()
+        await enterVRMode()
+    }
+}
+
+// Gyroscope functions
+const checkGyroAvailability = () => {
+    if (typeof window !== 'undefined') {
+        hasGyro.value = 'DeviceOrientationEvent' in window
+    }
+}
+
+const requestGyroPermission = async () => {
+    showPermissionDialog.value = false
+
+    // iOS 13+ requires permission
+    if (typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
+        try {
+            const permission = await (DeviceOrientationEvent as any).requestPermission()
+            if (permission === 'granted') {
+                enableGyroscope()
+            } else {
+                alert.error('Permission Denied', 'Gyroscope access was denied')
+            }
+        } catch (error) {
+            console.error('Error requesting gyroscope permission:', error)
+            alert.error('Error', 'Failed to request gyroscope permission')
+        }
+    } else {
+        // Non-iOS or older iOS
+        enableGyroscope()
+    }
+}
+
+const enableGyroscope = () => {
+    if (!viewer) return
+
+    gyroEnabled.value = true
+    // Reset calibration values for fresh start
+    initialAlpha = null
+    initialBeta = null
+    initialGamma = null
+
+    orientationHandler = (event: DeviceOrientationEvent) => {
+        if (!viewer || !gyroEnabled.value) return
+
+        const alpha = event.alpha // Rotation around z-axis (0-360)
+        const beta = event.beta   // Rotation around x-axis (-180 to 180)
+        const gamma = event.gamma // Rotation around y-axis (-90 to 90)
+
+        if (alpha === null || beta === null || gamma === null) return
+
+        // Calibrate on first reading
+        if (initialAlpha === null) {
+            initialAlpha = alpha
+            initialBeta = beta
+            initialGamma = gamma
+            return
+        }
+
+        // Calculate relative orientation
+        let yaw = alpha - initialAlpha
+        let pitch = beta - (initialBeta ?? 0)
+
+        // Normalize yaw to -180 to 180
+        if (yaw > 180) yaw -= 360
+        if (yaw < -180) yaw += 360
+
+        // Clamp pitch to reasonable values
+        pitch = Math.max(-90, Math.min(90, pitch))
+
+        // Update viewer orientation
+        viewer.setPitch(pitch)
+        viewer.setYaw(yaw)
+    }
+
+    window.addEventListener('deviceorientation', orientationHandler)
+}
+
+const disableGyroscope = () => {
+    gyroEnabled.value = false
+    if (orientationHandler) {
+        window.removeEventListener('deviceorientation', orientationHandler)
+        orientationHandler = null
+    }
+}
+
+const toggleGyroscope = () => {
+    if (gyroEnabled.value) {
+        disableGyroscope()
+    } else {
+        // Check if permission is needed (iOS 13+)
+        if (typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
+            showPermissionDialog.value = true
+        } else {
+            enableGyroscope()
+        }
+    }
+}
+
+const initPannellum = () => {
+    if (!currentScene.value) {
+        panoramaLoadError.value = 'No scene data available'
+        return
+    }
+
+    if (typeof window === 'undefined' || !(window as any).pannellum) {
+        panoramaLoadError.value = 'Panorama viewer not available'
+        return
+    }
+
+    try {
+        isPanoramaLoading.value = true
+        panoramaLoadError.value = null
+
+        // Prepare hotspots for Pannellum
+        const hotspots = currentScene.value.hotSpots?.map(hotspot => ({
+            pitch: hotspot.pitch,
+            yaw: hotspot.yaw,
+            type: hotspot.type === 'scene' ? 'scene' : 'info',
+            text: hotspot.title,
+            cssClass: `hotspot-${hotspot.type} ${hotspot.cssClass || ''}`,
+            clickHandlerFunc: () => handleHotspotClick(hotspot),
+            clickHandlerArgs: hotspot
+        })) || []
+
+        viewer = (window as any).pannellum.viewer('panorama', {
+            type: 'equirectangular',
+            panorama: currentScene.value.image,
+            autoLoad: true,
+            pitch: currentScene.value.pitch || 0,
+            yaw: currentScene.value.yaw || 0,
+            hfov: currentScene.value.hfov || 100,
+            showControls: false,
+            compass: false,
+            vaov: 180,
+            haov: 360,
+            minHfov: 50,
+            maxHfov: 120,
+            autoRotate: false,
+            friction: 0.15,
+            dynamicUpdate: true,
+            backgroundColor: [0, 0, 0],
+            hotSpots: hotspots
+        })
+
+        // Listen for load events
+        viewer.on('load', () => {
+            isPanoramaLoading.value = false
+        })
+
+        viewer.on('error', (err: any) => {
+            isPanoramaLoading.value = false
+            panoramaLoadError.value = 'Failed to load panorama image. Please check your connection and try again.'
+            console.error('Pannellum load error:', err)
+        })
+    } catch (error) {
+        isPanoramaLoading.value = false
+        panoramaLoadError.value = 'An unexpected error occurred while loading the panorama.'
+        console.error('Init Pannellum error:', error)
+    }
+}
+
+const retryLoadPanorama = () => {
+    panoramaLoadError.value = null
+    if (viewer) {
+        viewer.destroy()
+        viewer = null
+    }
+    initPannellum()
+}
+
+const handleHotspotClick = (hotspot: any) => {
+    if (hotspot.type === 'ticket') {
+        showTicketDialog.value = true
+        selectedHotspot.value = hotspot
+    } else if (hotspot.type === 'info') {
+        showInfoDialog.value = true
+        selectedHotspot.value = hotspot
+    } else if (hotspot.type === 'scene') {
+        handleSceneNavigation(hotspot.targetSceneId)
+    }
+}
+
+const handleSceneNavigation = async (targetSceneId: string) => {
+    if (!targetSceneId) {
+        console.error('No target scene ID provided')
+        return
+    }
+
+    try {
+        // Show loading state
+        isPanoramaLoading.value = true
+        panoramaLoadError.value = null
+
+        // Destroy current viewer
+        if (viewer) {
+            viewer.destroy()
+            viewer = null
+        }
+
+        // Small delay for smooth transition
+        await new Promise(resolve => setTimeout(resolve, 300))
+
+        // Load new scene
+        const success = loadScene(targetSceneId)
+
+        if (!success) {
+            panoramaLoadError.value = `Scene "${targetSceneId}" not found`
+            isPanoramaLoading.value = false
+            return
+        }
+
+        // Wait for next tick to ensure DOM is updated
+        await nextTick()
+
+        // Initialize new scene
+        initPannellum()
+    } catch (error) {
+        console.error('Scene navigation error:', error)
+        panoramaLoadError.value = 'Failed to navigate to scene'
+        isPanoramaLoading.value = false
+    }
+}
+
+const addToCartFromHotspot = async () => {
+    if (!selectedHotspot.value || selectedHotspot.value.type !== 'ticket') return
+
+    try {
+        await cartStore.addItem({
+            itemId: selectedHotspot.value.attractionId || '',
+            name: selectedHotspot.value.attractionName || selectedHotspot.value.title,
+            price: selectedHotspot.value.price || 0,
+            type: 'attraction',
+            image: currentScene.value?.image || '',
+            quantity: 1
+        })
+        alert.success('Success', `Added ${selectedHotspot.value.attractionName} to cart!`)
+        showTicketDialog.value = false
+    } catch (error) {
+        console.error(error)
+        alert.error('Error', 'Failed to add item to cart')
+    }
+}
+
+const handleCloseTour = async () => {
+    disableGyroscope()
+    await exitFullscreen()
+    unlockOrientation()
+    closeTour()
+}
+
+// Handle fullscreen change events
+const handleFullscreenChange = () => {
+    const isCurrentlyFullscreen = !!(
+        document.fullscreenElement ||
+        (document as any).webkitFullscreenElement ||
+        (document as any).mozFullScreenElement ||
+        (document as any).msFullscreenElement
+    )
+    isFullscreen.value = isCurrentlyFullscreen
+}
+
+// Watch for tour opening
+watch(isTourOpen, async (isOpen) => {
+    if (isOpen) {
+        await nextTick()
+        // Initialize Pannellum first
+        initPannellum()
+
+        // Enter fullscreen immediately after initialization
+        setTimeout(async () => {
+            try {
+                await enterFullscreen()
+                await lockOrientation()
+            } catch (error) {
+                console.warn('Fullscreen or orientation lock failed:', error)
+                // Continue anyway - fullscreen might be blocked by browser
+            }
+        }, 50)
+    } else {
+        if (viewer) {
+            viewer.destroy()
+            viewer = null
+        }
+        disableGyroscope()
+        await exitFullscreen()
+        unlockOrientation()
+    }
+})
+
+onMounted(() => {
+    checkGyroAvailability()
+    checkVRSupport()
+
+    // Listen for fullscreen changes
+    document.addEventListener('fullscreenchange', handleFullscreenChange)
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange)
+    document.addEventListener('mozfullscreenchange', handleFullscreenChange)
+    document.addEventListener('MSFullscreenChange', handleFullscreenChange)
+})
+
+onUnmounted(() => {
+    disableGyroscope()
+    unlockOrientation()
+
+    // Remove fullscreen listeners
+    document.removeEventListener('fullscreenchange', handleFullscreenChange)
+    document.removeEventListener('webkitfullscreenchange', handleFullscreenChange)
+    document.removeEventListener('mozfullscreenchange', handleFullscreenChange)
+    document.removeEventListener('MSFullscreenChange', handleFullscreenChange)
+})
+</script>
+
+<style>
+/* Pannellum structural styles */
+.pnlm-container {
+    font-family: inherit;
+}
+
+/* Hotspot Styles */
+.pnlm-hotspot {
+    width: 48px !important;
+    height: 48px !important;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    animation: pulse 2s infinite;
+}
+
+.pnlm-hotspot:hover {
+    transform: scale(1.2);
+    animation: none;
+}
+
+/* Ticket Hotspot - Green */
+.hotspot-ticket {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    box-shadow: 0 4px 20px rgba(16, 185, 129, 0.5);
+    border: 3px solid white;
+}
+
+.hotspot-ticket::before {
+    content: '🎫';
+    font-size: 24px;
+}
+
+/* Info Hotspot - Blue */
+.hotspot-info {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    box-shadow: 0 4px 20px rgba(59, 130, 246, 0.5);
+    border: 3px solid white;
+}
+
+.hotspot-info::before {
+    content: 'ℹ️';
+    font-size: 24px;
+}
+
+/* Scene Navigation Hotspot - Purple */
+.hotspot-scene {
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+    box-shadow: 0 4px 20px rgba(139, 92, 246, 0.5);
+    border: 3px solid white;
+}
+
+.hotspot-scene::before {
+    content: '➡️';
+    font-size: 24px;
+}
+
+/* Pulse Animation */
+@keyframes pulse {
+
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7);
+    }
+
+    50% {
+        box-shadow: 0 0 0 15px rgba(255, 255, 255, 0);
+    }
+}
+
+/* Hotspot Tooltip */
+.pnlm-tooltip {
+    background: rgba(0, 0, 0, 0.9) !important;
+    color: white !important;
+    padding: 8px 16px !important;
+    border-radius: 12px !important;
+    font-weight: 600 !important;
+    font-size: 14px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+    backdrop-filter: blur(10px) !important;
+}
+
+/* VR Stereo Mode Styles */
+#panorama.vr-stereo-mode {
+    display: flex !important;
+}
+
+/* Side-by-side stereo rendering for Google Cardboard */
+#panorama.vr-stereo-mode .pnlm-render-container {
+    width: 50% !important;
+    display: inline-block !important;
+}
+
+/* Create two viewports for left and right eye */
+#panorama.vr-stereo-mode::before,
+#panorama.vr-stereo-mode::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    width: 50%;
+    height: 100%;
+    pointer-events: none;
+}
+
+/* Left eye viewport */
+#panorama.vr-stereo-mode::before {
+    left: 0;
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Right eye viewport */
+#panorama.vr-stereo-mode::after {
+    right: 0;
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Adjust canvas for stereo rendering */
+#panorama.vr-stereo-mode canvas {
+    width: 200% !important;
+    margin-left: -50% !important;
+}
+
+/* Hide UI controls in VR stereo mode for cleaner view */
+.vr-stereo-mode~.absolute {
+    opacity: 0.3;
+    transition: opacity 0.3s;
+}
+
+.vr-stereo-mode~.absolute:hover {
+    opacity: 1;
+}
+</style>
